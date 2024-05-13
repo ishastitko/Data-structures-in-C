@@ -1,0 +1,424 @@
+/*
+**      DLL_Init ........... inicializace seznamu před prvním použitím,
+**      DLL_Dispose ........ zrušení všech prvků seznamu,
+**      DLL_InsertFirst .... vložení prvku na začátek seznamu,
+**      DLL_InsertLast ..... vložení prvku na konec seznamu,
+**      DLL_First .......... nastavení aktivity na první prvek,
+**      DLL_Last ........... nastavení aktivity na poslední prvek,
+**      DLL_GetFirst ....... vrací hodnotu prvního prvku,
+**      DLL_GetLast ........ vrací hodnotu posledního prvku,
+**      DLL_DeleteFirst .... zruší první prvek seznamu,
+**      DLL_DeleteLast ..... zruší poslední prvek seznamu,
+**      DLL_DeleteAfter .... ruší prvek za aktivním prvkem,
+**      DLL_DeleteBefore ... ruší prvek před aktivním prvkem,
+**      DLL_InsertAfter .... vloží nový prvek za aktivní prvek seznamu,
+**      DLL_InsertBefore ... vloží nový prvek před aktivní prvek seznamu,
+**      DLL_GetValue ....... vrací hodnotu aktivního prvku,
+**      DLL_SetValue ....... přepíše obsah aktivního prvku novou hodnotou,
+**      DLL_Previous ....... posune aktivitu na předchozí prvek seznamu,
+**      DLL_Next ........... posune aktivitu na další prvek seznamu,
+**      DLL_IsActive ....... zjišťuje aktivitu seznamu.
+**/
+
+#include "c206.h"
+
+int error_flag;
+int solved;
+
+/**
+ * Vytiskne upozornění na to, že došlo k chybě.
+ * Tato funkce bude volána z některých dále implementovaných operací.
+ */
+void DLL_Error() {
+	printf("*ERROR* The program has performed an illegal operation.\n");
+	error_flag = TRUE;
+}
+
+/**
+ * Provede inicializaci seznamu list před jeho prvním použitím (tzn. žádná
+ * z následujících funkcí nebude volána nad neinicializovaným seznamem).
+ * Tato inicializace se nikdy nebude provádět nad již inicializovaným seznamem,
+ * a proto tuto možnost neošetřujte.
+ * Vždy předpokládejte, že neinicializované proměnné mají nedefinovanou hodnotu.
+ *
+ * @param list Ukazatel na strukturu dvousměrně vázaného seznamu
+ */
+void DLL_Init( DLList *list ) {
+	/** 
+	 * Inicializace seznamu nastavením firstElement,
+	 * activeElement a lastElement na hodnotu NULL
+	 */
+	list->firstElement = NULL;
+	list->activeElement = NULL;
+	list->lastElement = NULL;
+}
+
+/**
+ * Zruší všechny prvky seznamu list a uvede seznam do stavu, v jakém se nacházel
+ * po inicializaci.
+ * Rušené prvky seznamu budou korektně uvolněny voláním operace free.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_Dispose( DLList *list ) {
+	/* Pomocná proměnná tmp */
+	DLLElementPtr tmp;
+
+	/* Uvolňování prvků se začne od prvního prvku */
+	list->activeElement = list->firstElement;
+	while (list->activeElement != NULL){
+		tmp = list->activeElement;
+		list->activeElement = tmp->nextElement;
+		free(tmp);
+	}
+
+	/* Honoty seznamu se nastaví jako po inicializaci */
+	DLL_Init(list);
+}
+
+/**
+ * Vloží nový prvek na začátek seznamu list.
+ * V případě, že není dostatek paměti pro nový prvek při operaci malloc,
+ * volá funkci DLL_Error().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param data Hodnota k vložení na začátek seznamu
+ */
+void DLL_InsertFirst( DLList *list, int data ) {
+	/* Alokace pamětí */
+	DLLElementPtr tmp = (DLLElementPtr) malloc(sizeof(struct DLLElement));
+
+	/* Kontrola dostatku pamětí */
+	if (tmp == NULL){
+		DLL_Error();
+		return;
+	}
+
+	/* Nastavení hodnoty nového prvku a změna pointerů */
+	tmp->data = data; 
+	tmp->nextElement = list->firstElement;
+	tmp->previousElement = NULL;
+	if (list->firstElement != NULL)
+		list->firstElement->previousElement = tmp;
+	else list->lastElement = tmp;
+	list->firstElement = tmp;
+}
+
+/**
+ * Vloží nový prvek na konec seznamu list (symetrická operace k DLL_InsertFirst).
+ * V případě, že není dostatek paměti pro nový prvek při operaci malloc,
+ * volá funkci DLL_Error().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param data Hodnota k vložení na konec seznamu
+ */
+void DLL_InsertLast( DLList *list, int data ) {
+	/* Alokace pamětí */
+	DLLElementPtr tmp = (DLLElementPtr) malloc(sizeof(struct DLLElement));
+
+	/* Kontrola dostatku pamětí */
+	if (tmp == NULL){
+		DLL_Error();
+		return;
+	}
+
+	/* Nastavení hodnoty nového prvku a změna pointerů */
+	tmp->data = data;
+	tmp->previousElement = list->lastElement;
+	tmp->nextElement = NULL;
+	if (list->lastElement != NULL)
+		list->lastElement->nextElement = tmp;
+	else
+		list->firstElement = tmp;
+	list->lastElement = tmp;
+}
+
+/**
+ * Nastaví první prvek seznamu list jako aktivní.
+ * Funkci implementujte jako jediný příkaz, aniž byste testovali,
+ * zda je seznam list prázdný.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_First( DLList *list ) {
+	list->activeElement = list->firstElement;
+}
+
+/**
+ * Nastaví poslední prvek seznamu list jako aktivní.
+ * Funkci implementujte jako jediný příkaz, aniž byste testovali,
+ * zda je seznam list prázdný.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_Last( DLList *list ) {
+	list->activeElement = list->lastElement;
+}
+
+/**
+ * Prostřednictvím parametru dataPtr vrátí hodnotu prvního prvku seznamu list.
+ * Pokud je seznam list prázdný, volá funkci DLL_Error().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param dataPtr Ukazatel na cílovou proměnnou
+ */
+void DLL_GetFirst( DLList *list, int *dataPtr ) {
+	if (list->firstElement != NULL){
+		*dataPtr = list->firstElement->data;
+	} else DLL_Error();
+}
+
+/**
+ * Prostřednictvím parametru dataPtr vrátí hodnotu posledního prvku seznamu list.
+ * Pokud je seznam list prázdný, volá funkci DLL_Error().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param dataPtr Ukazatel na cílovou proměnnou
+ */
+void DLL_GetLast( DLList *list, int *dataPtr ) {
+	if (list->lastElement != NULL){
+		*dataPtr = list->lastElement->data;
+	} else DLL_Error();
+}
+
+/**
+ * Zruší první prvek seznamu list.
+ * Pokud byl první prvek aktivní, aktivita se ztrácí.
+ * Pokud byl seznam list prázdný, nic se neděje.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_DeleteFirst( DLList *list ) {
+	DLLElementPtr tmp;
+
+	if (list->firstElement != NULL){
+		tmp = list->firstElement;
+
+		/* Když první prvek je aktuální */
+		if (list->activeElement == list->firstElement)
+			list->activeElement = NULL;
+
+		/* Když v seznamu pouze jeden prvek */
+		if (list->firstElement == list->lastElement){
+			list->firstElement = NULL;
+			list->lastElement = NULL;
+
+		/* Když v seznamu víc než jeden prvek */
+		} else {
+			list->firstElement = list->firstElement->nextElement;
+			list->firstElement->previousElement = NULL;
+		}
+		free(tmp);
+	}
+}
+
+/**
+ * Zruší poslední prvek seznamu list.
+ * Pokud byl poslední prvek aktivní, aktivita seznamu se ztrácí.
+ * Pokud byl seznam list prázdný, nic se neděje.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_DeleteLast( DLList *list ) {
+	DLLElementPtr tmp;
+
+	if (list->firstElement != NULL){
+		tmp = list->lastElement;
+
+		/* Když poslední prvek je aktuální */
+		if (list->activeElement == list->lastElement)
+			list->activeElement = NULL;
+
+		/* Když v seznamu pouze jeden prvek */
+		if (list->firstElement == list->lastElement){
+			list->firstElement = NULL;
+			list->lastElement = NULL;
+
+		/* Když v seznamu víc než jeden prvek */
+		} else {
+			list->lastElement = list->lastElement->previousElement;
+			list->lastElement->nextElement = NULL;
+		}
+		free(tmp);
+	}
+}
+
+/**
+ * Zruší prvek seznamu list za aktivním prvkem.
+ * Pokud je seznam list neaktivní nebo pokud je aktivní prvek
+ * posledním prvkem seznamu, nic se neděje.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_DeleteAfter( DLList *list ) {
+	DLLElementPtr tmp;
+
+	if (list->activeElement != NULL && list->activeElement->nextElement != NULL){
+		/* Změna porinterů a uvolňování paměti */
+		tmp = list->activeElement->nextElement;
+		list->activeElement->nextElement = tmp->nextElement;
+		if (tmp == list->lastElement)
+			list->lastElement = list->activeElement;
+		else tmp->nextElement->previousElement = list->activeElement;
+
+		free(tmp);
+	}
+}
+
+/**
+ * Zruší prvek před aktivním prvkem seznamu list .
+ * Pokud je seznam list neaktivní nebo pokud je aktivní prvek
+ * prvním prvkem seznamu, nic se neděje.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_DeleteBefore( DLList *list ) {
+	DLLElementPtr tmp;
+
+	if (list->activeElement != NULL && list->activeElement->previousElement != NULL){
+		/* Změna porinterů a uvolňování paměti */
+		tmp = list->activeElement->previousElement;
+		list->activeElement->previousElement = tmp->previousElement;
+		if (tmp == list->firstElement)
+			list->firstElement = list->activeElement;
+		else tmp->previousElement->nextElement = list->activeElement;
+		
+		free(tmp);
+	}
+}
+
+/**
+ * Vloží prvek za aktivní prvek seznamu list.
+ * Pokud nebyl seznam list aktivní, nic se neděje.
+ * V případě, že není dostatek paměti pro nový prvek při operaci malloc,
+ * volá funkci DLL_Error().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param data Hodnota k vložení do seznamu za právě aktivní prvek
+ */
+void DLL_InsertAfter( DLList *list, int data ) {
+	if (list->activeElement != NULL){
+		/* Alokace paměti */
+		DLLElementPtr tmp = (DLLElementPtr) malloc(sizeof(struct DLLElement));
+
+		/* Kontrola dostatku pamětí */
+		if (tmp == NULL){
+			DLL_Error();
+			return;
+		}
+
+		/* Nastavení hodnoty nového prvku a změna pointerů */
+		tmp->data = data;
+		tmp->nextElement = list->activeElement->nextElement;
+		tmp->previousElement = list->activeElement;
+		list->activeElement->nextElement = tmp;
+
+		/* Když aktuální prvek je poslední */
+		if (list->activeElement == list->lastElement)
+			list->lastElement = tmp;
+		else tmp->nextElement->previousElement = tmp;
+	}
+}
+
+/**
+ * Vloží prvek před aktivní prvek seznamu list.
+ * Pokud nebyl seznam list aktivní, nic se neděje.
+ * V případě, že není dostatek paměti pro nový prvek při operaci malloc,
+ * volá funkci DLL_Error().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param data Hodnota k vložení do seznamu před právě aktivní prvek
+ */
+void DLL_InsertBefore( DLList *list, int data ) {
+	if (list->activeElement != NULL){
+		/* Alokace paměti */
+		DLLElementPtr tmp = (DLLElementPtr) malloc(sizeof(struct DLLElement));
+
+		/* Kontrola dostatku pamětí */
+		if (tmp == NULL){
+			DLL_Error();
+			return;
+		}
+
+		/* Nastavení hodnoty nového prvku a změna pointerů */
+		tmp->data = data;
+		tmp->previousElement = list->activeElement->previousElement;
+		tmp->nextElement = list->activeElement;
+		list->activeElement->previousElement = tmp;
+
+		/* Když aktuální prvek je první */
+		if (list->activeElement == list->firstElement)
+			list->firstElement = tmp;
+		else tmp->previousElement->nextElement = tmp;
+	}
+}
+
+/**
+ * Prostřednictvím parametru dataPtr vrátí hodnotu aktivního prvku seznamu list.
+ * Pokud seznam list není aktivní, volá funkci DLL_Error ().
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param dataPtr Ukazatel na cílovou proměnnou
+ */
+void DLL_GetValue( DLList *list, int *dataPtr ) {
+	if (list->activeElement != NULL)
+		*dataPtr = list->activeElement->data;
+	else DLL_Error();
+}
+
+/**
+ * Přepíše obsah aktivního prvku seznamu list.
+ * Pokud seznam list není aktivní, nedělá nic.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ * @param data Nová hodnota právě aktivního prvku
+ */
+void DLL_SetValue( DLList *list, int data ) {
+	if (list->activeElement != NULL)
+		list->activeElement->data = data;
+}
+
+/**
+ * Posune aktivitu na následující prvek seznamu list.
+ * Není-li seznam aktivní, nedělá nic.
+ * Všimněte si, že při aktivitě na posledním prvku se seznam stane neaktivním.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_Next( DLList *list ) {
+	if (list->activeElement != NULL){
+		if (list->activeElement == list->lastElement)
+			list->activeElement = NULL;
+		else list->activeElement = list->activeElement->nextElement;
+	}
+}
+
+
+/**
+ * Posune aktivitu na předchozí prvek seznamu list.
+ * Není-li seznam aktivní, nedělá nic.
+ * Všimněte si, že při aktivitě na prvním prvku se seznam stane neaktivním.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ */
+void DLL_Previous( DLList *list ) {
+	if (list->activeElement != NULL){
+		if (list->activeElement == list->firstElement)
+			list->activeElement = NULL;
+		else list->activeElement = list->activeElement->previousElement;
+	}
+}
+
+/**
+ * Je-li seznam list aktivní, vrací nenulovou hodnotu, jinak vrací 0.
+ * Funkci je vhodné implementovat jedním příkazem return.
+ *
+ * @param list Ukazatel na inicializovanou strukturu dvousměrně vázaného seznamu
+ *
+ * @returns Nenulovou hodnotu v případě aktivity prvku seznamu, jinak nulu
+ */
+int DLL_IsActive( DLList *list ) {
+	return (list->activeElement != NULL);
+}
+
+/* Konec c206.c */
